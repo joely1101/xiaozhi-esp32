@@ -31,7 +31,7 @@
 #include <cJSON.h>
 #include <driver/gpio.h>
 #include <arpa/inet.h>
-
+#include "zh_t2s.h"
 #define TAG "Application"
 
 
@@ -134,7 +134,7 @@ void Application::CheckNewVersion(Ota& ota) {
         retry_count = 0;
         retry_delay = 10; // 重置重试延迟时间
 
-        if (ota.HasNewVersion()) {
+        if (0) {
             Alert(Lang::Strings::OTA_UPGRADE, Lang::Strings::UPGRADING, "happy", Lang::Sounds::P3_UPGRADE);
 
             vTaskDelay(pdMS_TO_TICKS(3000));
@@ -534,8 +534,17 @@ void Application::Start() {
             } else if (strcmp(state->valuestring, "sentence_start") == 0) {
                 auto text = cJSON_GetObjectItem(root, "text");
                 if (cJSON_IsString(text)) {
-                    ESP_LOGI(TAG, "<< %s", text->valuestring);
-                    Schedule([this, display, message = std::string(text->valuestring)]() {
+                    std::string message_copy;
+                    char* zhstring=zh_t2s_string(text->valuestring);
+                    if (zhstring == NULL) {
+                        message_copy = text->valuestring;
+                    }
+                    else{
+                        message_copy = zhstring;
+                        free(zhstring);
+                    }
+                    ESP_LOGI(TAG, ">> %s >>> %s", text->valuestring, message_copy.c_str());
+                    Schedule([this, display, message = std::move(message_copy)]() {
                         display->SetChatMessage("assistant", message.c_str());
                     });
                 }
@@ -543,8 +552,17 @@ void Application::Start() {
         } else if (strcmp(type->valuestring, "stt") == 0) {
             auto text = cJSON_GetObjectItem(root, "text");
             if (cJSON_IsString(text)) {
-                ESP_LOGI(TAG, ">> %s", text->valuestring);
-                Schedule([this, display, message = std::string(text->valuestring)]() {
+                std::string message_copy;
+                char* zhstring=zh_t2s_string(text->valuestring);
+                if (zhstring == NULL) {
+                    message_copy = text->valuestring;
+                }
+                else{
+                    message_copy = zhstring;
+                    free(zhstring);
+                }
+                ESP_LOGI(TAG, ">> %s >>> %s", text->valuestring, message_copy.c_str());
+                Schedule([this, display, message = std::move(message_copy)]() {
                     display->SetChatMessage("user", message.c_str());
                 });
             }
